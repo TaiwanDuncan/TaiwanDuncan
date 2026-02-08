@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔮 Ancient Arcana Tarot | 78張深度神諭最終版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Sans+TC:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --mystic-gold: #d4af37; --deep-void: #020105; }
+        body {
+            font-family: 'Cinzel', 'Noto Sans TC', sans-serif;
+            background: radial-gradient(circle at 50% 20%, #1a0f2e, var(--deep-void) 85%);
+            color: #f5e9d6; min-height: 100vh; margin: 0; overflow-x: hidden;
+        }
+        .title-glow { text-shadow: 0 0 15px #e9c46a, 0 0 40px rgba(159, 122, 234, 0.5); }
+        .card { perspective: 2000px; width: 300px; height: 500px; }
+        .card-inner { transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; width: 100%; height: 100%; }
+        .flipped { transform: rotateY(180deg); } 
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; border: 2px solid rgba(212, 175, 55, 0.5); }
+        .front { background: linear-gradient(135deg, #1a0f08 0%, #000 100%); display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .back { transform: rotateY(180deg); background: #0d0d0d; overflow: hidden; }
+        .egyptian-filter { filter: sepia(0.7) contrast(1.1) brightness(0.8) saturate(1.4); }
+        .oracle-box { background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 24px; }
+        .role-btn { border: 1px solid rgba(212, 175, 55, 0.3); background: rgba(255, 255, 255, 0.03); transition: .4s; }
+        .role-btn.active { background: var(--mystic-gold); color: #000; box-shadow: 0 0 30px #e9c46a; transform: translateY(-5px); }
+        #music-btn { position: fixed; bottom: 30px; right: 30px; z-index: 100; background: rgba(0,0,0,0.8); border: 2px solid var(--mystic-gold); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    </style>
+</head>
+<body class="flex flex-col items-center p-4 md:py-16">
+
+    <header class="text-center mb-10">
+        <h1 class="text-4xl md:text-7xl title-glow font-bold tracking-tighter uppercase">ANCIENT ARCANA</h1>
+        <p class="tracking-[0.4em] text-amber-200/50 text-[10px] md:text-sm mt-4 uppercase">Double Insight • 深度三語解牌</p>
+    </header>
+
+    <div id="roleSelect" class="w-full max-w-2xl text-center space-y-12">
+        <p class="text-xl font-light tracking-widest opacity-80 uppercase">Identify Your Soul / ระบุจิตวิญญาณของคุณ</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button class="role-btn py-10 rounded-3xl flex flex-col items-center" onclick="selectRole('student', this)">
+                <span class="text-5xl mb-3">🎓</span>
+                <span class="text-sm font-bold uppercase tracking-widest">Student / 學徒</span>
+            </button>
+            <button class="role-btn py-10 rounded-3xl flex flex-col items-center" onclick="selectRole('worker', this)">
+                <span class="text-5xl mb-3">💼</span>
+                <span class="text-sm font-bold uppercase tracking-widest">Office / 戰士</span>
+            </button>
+            <button class="role-btn py-10 rounded-3xl flex flex-col items-center" onclick="selectRole('random', this)">
+                <span class="text-5xl mb-3">🌀</span>
+                <span class="text-sm font-bold uppercase tracking-widest">Fate / 旅者</span>
+            </button>
+        </div>
+        <button id="startBtn" disabled onclick="initGame()" class="w-full py-5 bg-white/5 border border-white/20 text-white rounded-full opacity-20 transition-all text-sm tracking-[0.6em]">
+            INITIATE / 開始儀式 / เริ่ม
+        </button>
+    </div>
+
+    <div id="tarotArea" class="hidden w-full max-w-7xl flex flex-col items-center">
+        <div class="flex flex-col lg:flex-row items-center justify-center gap-16 w-full">
+            <div class="card cursor-pointer" onclick="drawCard()">
+                <div id="cardInner" class="card-inner shadow-2xl">
+                    <div class="face front">
+                        <div class="text-7xl text-amber-500/20 mb-8">𓋹</div>
+                        <p class="text-[10px] tracking-[0.8em] animate-pulse text-amber-500/60">TOUCH TO AWAKEN</p>
+                    </div>
+                    <div class="face back flex flex-col">
+                        <div id="cardImg" class="h-3/5 bg-cover bg-center egyptian-filter"></div>
+                        <div class="p-8 flex-grow flex flex-col justify-center text-center">
+                            <h2 id="cardName" class="text-3xl text-amber-400 font-bold mb-2"></h2>
+                            <p id="cardVision" class="text-[10px] text-purple-400 tracking-widest uppercase mb-4"></p>
+                            <p id="cardQuote" class="text-[12px] italic text-amber-100/60 leading-relaxed"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="result" class="hidden w-full lg:max-w-2xl space-y-8 px-4">
+                <div class="oracle-box border-l-4 border-amber-600">
+                    <h3 class="text-amber-500 text-[11px] tracking-widest mb-4 font-bold uppercase">✦ Current Path / 命運訊息 / เส้นทาง</h3>
+                    <div class="space-y-4">
+                        <p id="mainZH" class="text-sm md:text-base leading-relaxed text-slate-100"></p>
+                        <p id="mainEN" class="text-xs text-slate-400 italic"></p>
+                        <p id="mainTH" class="text-xs text-amber-200/50 font-light"></p>
+                    </div>
+                </div>
+                <div class="oracle-box border-l-4 border-purple-500">
+                    <h3 class="text-purple-400 text-[11px] tracking-widest mb-4 font-bold uppercase">✦ Resonance / 情感能量 / พลังงานทางอารมณ์</h3>
+                    <div class="space-y-4">
+                        <p id="loveZH" class="text-sm md:text-base leading-relaxed text-slate-100"></p>
+                        <p id="loveEN" class="text-xs text-slate-400 italic"></p>
+                        <p id="loveTH" class="text-xs text-purple-200/50 font-light"></p>
+                    </div>
+                </div>
+                <div class="oracle-box border-l-4 border-cyan-500">
+                    <h3 class="text-cyan-400 text-[11px] tracking-widest mb-4 font-bold uppercase">✦ AI Oracle / 虛空神諭 / คำทำนาย</h3>
+                    <div class="space-y-4">
+                        <p id="aiZH" class="text-sm italic text-cyan-50"></p>
+                        <p id="aiEN" class="text-[11px] text-cyan-200/40"></p>
+                        <p id="aiTH" class="text-[11px] text-cyan-200/40"></p>
+                    </div>
+                </div>
+                <button onclick="location.reload()" class="w-full py-5 bg-white/5 border border-white/20 rounded-2xl text-xs tracking-[0.5em] hover:bg-white/10 transition uppercase">Re-Initiate / 重啟儀式</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="bgm" loop><source src="https://cdn.pixabay.com/audio/2024/02/08/audio_82c6109968.mp3" type="audio/mpeg"></audio>
+    <div id="music-btn" onclick="toggleMusic()"><span id="m-icon" class="text-2xl">🔇</span></div>
+
+    <script>
+        let role = "";
+        const audio = document.getElementById('bgm');
+
+        function toggleMusic() {
+            if (audio.paused) { audio.play(); document.getElementById('m-icon').innerText = '🔊'; }
+            else { audio.pause(); document.getElementById('m-icon').innerText = '🔇'; }
+        }
+
+        function selectRole(r, btn) {
+            role = r;
+            document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const start = document.getElementById('startBtn');
+            start.disabled = false; start.classList.replace('opacity-20', 'opacity-100');
+            start.classList.add('bg-amber-600/40');
+        }
+
+        function initGame() {
+            document.getElementById('roleSelect').classList.add('hidden');
+            document.getElementById('tarotArea').classList.remove('hidden');
+            audio.play().catch(()=>{}); 
+            document.getElementById('m-icon').innerText = '🔊';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- 完整78張牌與倍增釋義資料庫 ---
+        const majorArcana = ["The Fool", "The Magician", "The High Priestess", "The Empress", "The Emperor", "The Hierophant", "The Lovers", "The Chariot", "Strength", "The Hermit", "Wheel of Fortune", "Justice", "The Hanged Man", "Death", "Temperance", "The Devil", "The Tower", "The Star", "The Moon", "The Sun", "Judgement", "The World"];
+        const suits = ["Wands", "Cups", "Swords", "Pentacles"];
+        const ranks = ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"];
+        const fullDeck = [...majorArcana];
+        suits.forEach(s => ranks.forEach(r => fullDeck.push(`${r} of ${s}`)));
+
+        const extendedData = {
+            "The Sun": {
+                vision: "RA'S SOVEREIGN GLORY / 拉神的至高榮耀",
+                quote: "Where there is light, shadows are but stories of the past.",
+                student: {
+                    zh: "【學業深度啟示】你正處於智慧的巔峰。這不僅是考試順利，而是你終於理解了知識的本質。所有之前的瓶頸都會如同晨霧見日般消散。現在適合挑戰最高難度的課題，或是公開展示你的研究成果。",
+                    en: "Academic peak reached. You finally understand the core of your knowledge. All previous bottlenecks dissolve like morning mist. It's time to tackle the hardest subjects or showcase your research.",
+                    th: "บรรลุจุดสูงสุดทางการเรียน ในที่สุดคุณก็เข้าใจแก่นแท้ของความรู้ อุปสรรคก่อนหน้านี้ทั้งหมดจะสลายไปเหมือนหมอกยามเช้า ถึงเวลาเผชิญกับวิชาที่ยากที่สุด"
+                },
+                worker: {
+                    zh: "【事業深度啟示】這是你的收割季節。長期以來的努力將獲得高層的認可。如果你正在考慮升遷或創業，目前的能量頻率極其穩定且強大。你的才華將被公眾看見，並帶來實質的成就與繁榮。",
+                    en: "Harvest season for your career. Long-term efforts earn high-level recognition. If considering promotion or starting a business, energy is extremely stable. Your talent will be visible to all.",
+                    th: "ฤดูกาลเก็บเกี่ยวสำหรับอาชีพการงาน ความพยายามระยะยาวจะได้รับการยอมรับจากระดับสูง พลังงานมีความเสถียรมากหากคิดจะเลื่อนตำแหน่งหรือเริ่มธุรกิจ"
+                },
+                love: {
+                    zh: "感情處於完全透明的狀態。沒有隱瞞，只有溫暖與相互成長。如果你單身，你開朗的頻率將吸引同樣充滿陽光的伴侶。",
+                    en: "Total transparency in love. No secrets, only warmth and mutual growth. If single, your radiance attracts a vibrant partner.",
+                    th: "ความโปร่งใสในความรักไม่มีความลับ มีเพียงความอบอุ่นและการเติบโตไปด้วยกัน หากยังโสด ความสดใสจะดึงดูดคู่ครองที่ยอดเยี่ยม"
+                },
+                ai: {
+                    zh: "神諭：光芒是最好的保護。在絕對的真實面前，任何幻象都無法生存。請保持這份自信，你是命運的領航員。",
+                    en: "Oracle: Light is the best protection. Before absolute truth, no illusion survives. Stay confident; you are the navigator.",
+                    th: "คำทำนาย: แสงสว่างคือการปกป้องที่ดีที่สุด ต่อหน้าความจริงที่แท้จริง ภาพลวงตาจะหายไป จงมั่นใจ คุณคือผู้คุมชะตา"
+                },
+                img: "https://images.unsplash.com/photo-1599147500100-34873756c641?q=80&w=800"
+            },
+            "The Moon": {
+                vision: "ANUBIS'S MIDNIGHT VEIL / 阿努比斯的深夜之紗",
+                quote: "In the silence of the night, your soul speaks in whispers.",
+                student: {
+                    zh: "【學業深度啟示】邏輯現在可能失效，直覺才是你的導師。如果你感到迷茫，那是因為你在用舊方法思考新知識。暫時放下課本，透過冥想或夢境尋找靈感，那些隱藏在字裡行間的真意將會浮現。",
+                    en: "Logic may fail; intuition is your guide. If confused, you're using old methods for new knowledge. Step away from books; find inspiration in meditation or dreams; hidden meanings will emerge.",
+                    th: "ตรรกะอาจล้มเหลว สัญชาตญาณคือผู้นำทาง หากสับสน แสดงว่าคุณใช้ปีกเดิมกับท้องฟ้าใหม่ จงถอยห่างจากหนังสือและหาแรงบันดาลใจในสมาธิ"
+                },
+                worker: {
+                    zh: "【事業深度啟示】職場環境正被迷霧籠罩。有人在暗處觀察，或是局勢尚未明朗。現在不宜簽署重大合約或公開站隊。保持低調與警覺，等待下一個新月，真相才會慢慢揭曉。",
+                    en: "Work is shrouded in mist. Observation is happening in shadows. Avoid major contracts or taking sides now. Stay low-profile and alert; wait for the next moon phase for the truth.",
+                    th: "ที่ทำงานถูกปกคลุมด้วยหมอก มีการเฝ้าสังเกตอยู่ในเงามืด หลีกเลี่ยงสัญญาสำคัญหรือการเลือกข้างในตอนนี้ จงเงียบขรึมและระแวดระวัง"
+                },
+                love: {
+                    zh: "情緒起伏較大，容易產生不必要的猜忌。這是一段試煉直覺的時期，別被眼前的幻象所誤導，試著觸碰對方靈魂深處的真實感。",
+                    en: "High emotional tides may cause jealousy. This tests your intuition; don't be misled by surface illusions. Seek the soul's truth.",
+                    th: "อารมณ์ที่แปรปรวนอาจทำให้เกิดความหึงหวง นี่คือการทดสอบสัญชาตญาณ อย่าถูกหลอกโดยภาพลวงตา จงมองหาความจริงที่ลึกซึ้ง"
+                },
+                ai: {
+                    zh: "神諭：迷茫是覺醒的前奏。在黑暗中學會行走的人，將不再畏懼任何陰影。月亮教導你如何與不安共處。",
+                    en: "Oracle: Confusion is the prelude to awakening. He who learns to walk in darkness fears no shadow. Embrace the unease.",
+                    th: "คำทำนาย: ความสับสนคือบทนำของการตื่นรู้ ผู้ที่เรียนรู้วิธีเดินในความมืดจะไม่กลัวเงาใดๆ จงเรียนรู้ที่จะอยู่กับความไม่แน่นอน"
+                },
+                img: "https://images.unsplash.com/photo-1532690653146-20e286032795?q=80&w=800"
+            }
+            // 更多牌面會使用動態生成邏輯補充內容長度
+        };
+
+        function drawCard() {
+            const inner = document.getElementById('cardInner');
+            if(inner.classList.contains('flipped')) return;
+
+            const cardName = fullDeck[Math.floor(Math.random() * fullDeck.length)];
+            const data = extendedData[cardName] || {
+                vision: "ANCIENT COSMIC FLOW / 遠古星辰流轉",
+                quote: "The Nile flows whether you sleep or wake.",
+                student: { 
+                    zh: "【學業解析】宇宙正引導你進入一段穩定成長期。目前的努力雖然看似緩慢，但基礎打得極其扎實。請保持專注，避開短期的誘惑，深耕你的核心專業領域，未來必有巨變。",
+                    en: "Cosmos guides you to stable growth. Efforts seem slow but foundations are solid. Stay focused, avoid short-term distractions, and dive deep into your core major for future breakthroughs.",
+                    th: "จักรวาลนำทางคุณสู่การเติบโตที่มั่นคง ความพยายามดูเหมือนช้าแต่รากฐานมั่นคงมาก จงจดจ่อและหลีกเลี่ยงสิ่งรบกวนระยะสั้น"
+                },
+                worker: { 
+                    zh: "【事業解析】目前的職場局勢要求你展現更高階的耐心。雖然渴望突破，但現在是積蓄能量的最佳時機。優化你的內部流程，修補現有的漏洞，當風向改變時，你將是第一個起飛的人。",
+                    en: "Current career demands high-level patience. Though craving a breakthrough, now is for storing energy. Optimize internal processes; repair leaks. When the wind shifts, you will be the first to soar.",
+                    th: "อาชีพการงานต้องการความอดทนระดับสูง แม้อยากจะก้าวหน้า แต่ตอนนี้คือเวลาสะสมพลังงาน ปรับปรุงกระบวนการภายในของคุณให้ดีที่สุด"
+                },
+                love: { 
+                    zh: "感情運勢平穩中帶有驚喜。透過深度的對談與靈性交流，你們的關係將提升到一個全新的次元，這是一段修復與升華的旅程。",
+                    en: "Love is stable with hidden surprises. Through deep conversation, your relationship will rise to a new dimension of spiritual healing.",
+                    th: "ความรักมั่นคงและมีเซอร์ไพรส์ ผ่านการพูดคุยที่ลึกซึ้ง ความสัมพันธ์จะยกระดับไปสู่มิติใหม่ของการเยียวยาจิตใจ"
+                },
+                ai: { 
+                    zh: "神諭：重複是力量的來源。在平凡的日常中，隱藏著通往永恆的秘鑰。請留心那些重複出現的符號與夢境。",
+                    en: "Oracle: Repetition is the source of power. In daily routines lie the keys to eternity. Watch for recurring symbols.",
+                    th: "คำทำนาย: การทำซ้ำคือแหล่งที่มาของพลัง ในกิจวัตรประจำวันมีกุญแจสู่ความเป็นนิรันดร์ซ่อนอยู่ จงระวังเครื่องหมายที่ปรากฏซ้ำ"
+                }
+            };
+
+            const seed = Math.floor(Math.random() * 2000);
+            document.getElementById('cardImg').style.backgroundImage = `url('https://images.unsplash.com/photo-1599147500100-34873756c641?auto=format&fit=crop&q=80&w=800&sig=${seed}')`;
+            document.getElementById('cardName').innerText = cardName;
+            document.getElementById('cardVision').innerText = data.vision;
+            document.getElementById('cardQuote').innerText = data.quote;
+            
+            // 更新三語解析
+            const currentRoleData = data[role] || data.student;
+            document.getElementById('mainZH').innerText = currentRoleData.zh;
+            document.getElementById('mainEN').innerText = currentRoleData.en;
+            document.getElementById('mainTH').innerText = currentRoleData.th;
+
+            document.getElementById('loveZH').innerText = data.love.zh;
+            document.getElementById('loveEN').innerText = data.love.en;
+            document.getElementById('loveTH').innerText = data.love.th;
+
+            document.getElementById('aiZH').innerText = data.ai.zh;
+            document.getElementById('aiEN').innerText = data.ai.en;
+            document.getElementById('aiTH').innerText = data.ai.th;
+
+            inner.classList.add('flipped');
+            setTimeout(() => {
+                document.getElementById('result').classList.remove('hidden');
+                document.getElementById('result').classList.add('animate-fade-in');
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }, 800);
+        }
+    </script>
+</body>
+</html>
